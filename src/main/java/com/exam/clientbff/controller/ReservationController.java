@@ -22,7 +22,7 @@ import com.exam.clientbff.domain.Reservation;
 import com.exam.clientbff.model.reservation.ReservationRequest;
 import com.exam.clientbff.model.reservation.UpdateReservationRequest;
 import com.exam.clientbff.service.ReservationService;
-import com.exam.clientbff.util.NotificationScheduler;
+import com.exam.clientbff.util.NotificationSender;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,13 +34,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @RequestMapping("/api/v1/reservation")
 public class ReservationController {
 
-	@Autowired
+
 	ReservationService reservationService;
 	
-	@Autowired 
-	NotificationScheduler notif;
+	NotificationSender notif;
 
 	private final Logger LOGGER = LoggerFactory.getLogger(getClass());
+
+
+    public ReservationController(NotificationSender notif, ReservationService reservationService) {
+        this.notif = notif;
+        this.reservationService = reservationService;
+    }
 
 	
 	//Create Reservation 
@@ -55,7 +60,6 @@ public class ReservationController {
 		LOGGER.info("START CREATE RESERVATION..");
 		Reservation reservation = null;
 		//Validates if time 1 hour after now
-		System.out.println(request.toString());
 		Boolean isValidRequest = reservationService.validateReservationRequest(request.getReservationDate());
 		if (isValidRequest) {
 			reservation = reservationService.reservationRequestToEnitity(request);
@@ -66,9 +70,6 @@ public class ReservationController {
 			response.put("message", "Invalid Request.");
 			return ResponseEntity.badRequest().body(response);
 		}
-
-		if (reservation == null)
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create reservation.");
 
 		LOGGER.info("END CREATE RESERVATION..");
 		return ResponseEntity.ok().body(reservation);

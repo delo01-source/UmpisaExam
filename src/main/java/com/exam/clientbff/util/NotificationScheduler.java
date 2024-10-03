@@ -17,64 +17,33 @@ import com.exam.clientbff.util.Constants.Contact;
 @Component
 public class NotificationScheduler {
 
-	@Autowired
-	private ReservationService reservationService;
-	@Autowired
-	private CustomerService customerService;
 
-	@Autowired
-	private ReservationRepository reservationRepo;
+	private final ReservationService reservationService;
+	
+	private final NotificationSender sender;
 
-	private final Logger LOGGER = LoggerFactory.getLogger(getClass());
+	private final ReservationRepository reservationRepo;
+
+	public NotificationScheduler(ReservationService reservationService, 
+			ReservationRepository reservationRepo, NotificationSender sender) {
+		this.reservationService = reservationService;
+		this.reservationRepo = reservationRepo;
+		this.sender = sender;
+	}
+
+
 
 	@Scheduled(cron = "0 0/10 * * * *") // checks, sends notifications, and updates reservations within 4 hours of now
 										// every 10 mins
 	public void run() {
 		reservationService.notifyReservation().forEach(reservation -> {
-			sendNotification(reservation.getCustomerId(), "REMINDER");
+			sender.sendNotification(reservation.getCustomerId(), "REMINDER");
 			reservation.setRemarks("REMINDED");
 			reservationRepo.save(reservation);
 		});
 
 	}
 
-	public void sendNotification(Long customerId, String remarks) {
-		Optional<Customer> customer = this.customerService.findCustomerById(customerId);
-		if (customer.isPresent()) {
-			if (customer.get().getNotificationMode().equals(Contact.EMAIL)) {
-				sendEmail(customer.get().getEmail(), remarks);
-			} else
-				sendSMS(customer.get().getPhoneNumber(), remarks);
-		}
 
-	}
-
-	public void sendEmail(String email, String remarks) {
-		LOGGER.info("Emailed " + message(remarks));
-
-	}
-
-	public void sendSMS(String phoneNumber, String remarks) {
-		LOGGER.info("SMS sent " + message(remarks));
-	}
-
-	public String message(String remarks) {
-		switch (remarks) {
-		case "CREATED":
-			return "reservation created";
-
-		case "UPDATED":
-			return "reservation updated";
-
-		case "CANCELLED":
-			return "reservation cancelled";
-
-		case "REMINDER":
-			return "reservation reminder";
-
-		}
-		return null;
-
-	}
 
 }
